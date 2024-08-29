@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import axios from "axios"
 
-
 // Suggested initial states
 const initialMessage = ''
 const initialEmail = ''
@@ -10,13 +9,12 @@ const initialX = 2
 const initialY = 2
 const initialIndex = 4//x * 3 + y // the index the "B" is at
 
-/*Not used. Just a visual represantion of the board
+/*Not used. Just a visual represantion of a 2D board
 const board = [ [[1, 1], [1, 2], [1, 3]],   //rows x 1 2 3 UP OR DOWN
                 [[2, 1], [2, 2], [2, 3]],   //cols y 1 2 3 RIGHT OR LEFT
                 [[3, 1], [3, 2], [3, 3]]
               ]
 */
-
 
 export default function AppFunctional(props) {
   // THE FOLLOWING HELPERS ARE JUST RECOMMENDATIONS.
@@ -26,12 +24,9 @@ export default function AppFunctional(props) {
   const [currIndex, setCurrIndex] = useState(initialIndex)
   const [x, setX] = useState(initialX); 
   const [y, setY] = useState(initialY); 
-  const [steps, setSteps] = useState(initialSteps); 
-
-  /*function getXY() {
-    // It it not necessary to have a state to track the coordinates.
-    // It's enough to know what index the "B" is at, to be able to calculate them.
-  }*/
+  const [steps, setSteps] = useState(initialSteps);
+  const [message, setMessage] = useState(initialMessage) 
+  const [email, setEmail] = useState(initialEmail);
 
   function getXYMessage() {
     // It it not necessary to have a state to track the "Coordinates (2, 2)" message for the user.
@@ -45,7 +40,14 @@ export default function AppFunctional(props) {
     setX(initialX);
     setY(initialY);
     setSteps(initialSteps);
-    setCurrIndex(initialIndex)
+    setCurrIndex(initialIndex);
+    setMessage(initialMessage);
+    setEmail(initialEmail);
+  }
+
+  function resetAfterSubmitting() {
+    // Resets email only, after submitting
+    setEmail(initialEmail);
   }
 
   function getNextIndex(direction) {
@@ -57,16 +59,36 @@ export default function AppFunctional(props) {
 
     switch (direction) {
       case 'up':
-        if (y > 1) newY--;
+        if(y > 1){
+          newY--;
+          setMessage('')
+        }else{
+          setMessage("You can't go up")
+        }
         break;
       case 'down':
-        if (y < 3) newY++;
+        if(y < 3){ 
+          newY++;
+          setMessage('')
+        }else{
+          setMessage("You can't go down")
+        }
         break;
       case 'right':
-        if (x < 3) newX++;
+        if(x < 3){
+          newX++;
+          setMessage('')
+        }else{
+          setMessage("You can't go right")
+        }
         break;
       case 'left':
-        if (x > 1) newX--;
+        if(x > 1){
+          newX--;
+          setMessage('')
+        }else{
+          setMessage("You can't go left")
+        }
         break;
       default:
         console.log("Can't move there");
@@ -81,8 +103,8 @@ export default function AppFunctional(props) {
       setSteps(prevCounter => prevCounter + 1);
       return getIndex(newX, newY);
     }
-    console.log("x: " + x + " y: "+ y)
-    console.log(getIndex(x, y))
+    //console.log("x: " + x + " y: "+ y)
+    //console.log(getIndex(x, y))
     //return getIndex(x, y)//x * 3 + y
     return currIndex;
   }
@@ -92,26 +114,38 @@ export default function AppFunctional(props) {
     return (y - 1) * 3 + (x - 1);
   }
 
-  const move = (evt) => {
+  function move(evt) {
     // This event handler can use the helper above to obtain a new index for the "B",
     // and change any states accordingly.
     setCurrIndex(getNextIndex(evt.target.id));
   }
 
-  //for email
   function onChange(evt) {
     // You will need this to update the value of the input.
+    setEmail(evt.target.value)
   }
 
   function onSubmit(evt) {
     // Use a POST request to send a payload to the server.
+    evt.preventDefault()
+  
+    const payload = {x, y, steps, email}
+   
+    axios.post('http://localhost:9000/api/result', payload)
+      .then(res => {
+        setMessage(res.data.message)
+        resetAfterSubmitting()
+      })
+      .catch(err => {
+        setMessage(err.response.data.message)
+      })
   }
 
   return (
     <div id="wrapper" className={props.className}>
       <div className="info">
         <h3 id="coordinates">{getXYMessage()}</h3>
-        <h3 id="steps">You moved {steps} times</h3>
+        <h3 id="steps">You moved {steps} {steps == 1 ? 'time' : 'times'}</h3>
       </div>
       <div id="grid">
         {
@@ -123,7 +157,7 @@ export default function AppFunctional(props) {
         }
       </div>
       <div className="info">
-        <h3 id="message"></h3>
+        <h3 id="message">{message === '' ? '' : message}</h3>
       </div>
       <div id="keypad">
         <button onClick={move} id="left"> LEFT </button>
@@ -132,8 +166,8 @@ export default function AppFunctional(props) {
         <button onClick={move} id="down"> DOWN </button>
         <button onClick={reset} id="reset">reset</button>
       </div>
-      <form>
-        <input id="email" type="email" placeholder="type email"></input>
+      <form onSubmit={onSubmit}>
+        <input id="email" onChange={onChange} value={email} type="email" placeholder="type email"></input>
         <input id="submit" type="submit"></input>
       </form>
     </div>
